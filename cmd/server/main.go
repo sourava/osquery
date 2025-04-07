@@ -3,9 +3,11 @@ package main
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	userDataHandler "github.com/sourava/secfix/internal/handler/user_data"
+	"github.com/sourava/secfix/internal/models"
+	userDataService "github.com/sourava/secfix/internal/service/user_data"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"net/http"
 	"os"
 )
 
@@ -18,11 +20,20 @@ func main() {
 	}
 	fmt.Println("Connected to database", db)
 
+	err = db.AutoMigrate(&models.VersionInfo{})
+	if err != nil {
+	}
+	err = db.AutoMigrate(&models.InstalledApplications{})
+	if err != nil {
+	}
+
+	userDataServiceObj := userDataService.NewUserDataService(db)
+	userDataHandlerObj := userDataHandler.NewUserDataHandler(userDataServiceObj)
+
 	r := gin.Default()
-	r.GET("/ping", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "pong",
-		})
-	})
-	r.Run()
+	r.GET("/latest_data", userDataHandlerObj.GetLatestUserData)
+	err = r.Run()
+	if err != nil {
+		return
+	}
 }
