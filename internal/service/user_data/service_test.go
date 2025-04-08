@@ -3,6 +3,7 @@ package user_data
 import (
 	"errors"
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/sourava/secfix/external/osquery"
 	"github.com/sourava/secfix/internal/models"
 	"github.com/stretchr/testify/assert"
 	"gorm.io/driver/postgres"
@@ -17,7 +18,8 @@ func TestGetLatestUserData_ShouldReturnError_WhenDBReturnsErrorWhileQuerying(t *
 		DriverName: "postgres",
 	})
 	db, _ := gorm.Open(dial, &gorm.Config{})
-	service := NewUserDataService(db)
+	mockOsqueryClient := new(osquery.MockOsqueryClient)
+	service := NewUserDataService(db, mockOsqueryClient)
 	mock.ExpectQuery(`SELECT`).WillReturnError(errors.New("some error"))
 
 	data, err := service.GetLatestUserData()
@@ -33,7 +35,8 @@ func TestGetLatestUserData_ShouldReturnError_WhenAppsInstalledAreNotStoredInCorr
 		DriverName: "postgres",
 	})
 	db, _ := gorm.Open(dial, &gorm.Config{})
-	service := NewUserDataService(db)
+	mockOsqueryClient := new(osquery.MockOsqueryClient)
+	service := NewUserDataService(db, mockOsqueryClient)
 	versionInfoRows := sqlmock.NewRows([]string{"os_version", "os_query_version"}).AddRow("1.0.0", "1.0.0")
 	mock.ExpectQuery(`SELECT`).WillReturnRows(versionInfoRows)
 	installedAppsRows := sqlmock.NewRows([]string{"apps_installed"}).AddRow("{}")
@@ -52,7 +55,8 @@ func TestGetLatestUserData_ShouldReturnData(t *testing.T) {
 		DriverName: "postgres",
 	})
 	db, _ := gorm.Open(dial, &gorm.Config{})
-	service := NewUserDataService(db)
+	mockOsqueryClient := new(osquery.MockOsqueryClient)
+	service := NewUserDataService(db, mockOsqueryClient)
 	versionInfoRows := sqlmock.NewRows([]string{"os_version", "os_query_version"}).AddRow("1.0.0", "1.0.0")
 	mock.ExpectQuery(`SELECT`).WillReturnRows(versionInfoRows)
 	installedAppsRows := sqlmock.NewRows([]string{"apps_installed"}).AddRow("[\"App1\"]")
@@ -75,14 +79,15 @@ func TestAddLatestUserData_ShouldReturnError_WhenDBReturnsErrorWhileInserting(t 
 		DriverName: "postgres",
 	})
 	db, _ := gorm.Open(dial, &gorm.Config{})
-	service := NewUserDataService(db)
+	mockOsqueryClient := new(osquery.MockOsqueryClient)
+	mockOsqueryClient.On("GetOsVersion").Return("1.0.0", nil)
+	mockOsqueryClient.On("GetOsqueryVersion").Return("1.0.0", nil)
+	mockOsqueryClient.On("GetAppsInstalled").Return([]string{"App1", "App2"}, nil)
+
+	service := NewUserDataService(db, mockOsqueryClient)
 	mock.ExpectQuery(`INSERT`).WillReturnError(errors.New("some error"))
 
-	err := service.AddLatestUserData(&models.UserData{
-		OSVersion:      "1.0.0",
-		OSQueryVersion: "1.0.0",
-		AppsInstalled:  []string{"App1"},
-	})
+	err := service.AddLatestUserData()
 
 	assert.NotNil(t, err)
 }

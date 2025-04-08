@@ -1,20 +1,6 @@
 version: '3.8'
 
 services:
-  service:
-    build: .
-    ports:
-      - "8080:8080"
-    environment:
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_USER=myuser
-      - DB_PASSWORD=mypassword
-      - DB_NAME=mydb
-    depends_on:
-      - postgres
-    networks:
-      - my-network
   postgres:
     image: postgres:13
     environment:

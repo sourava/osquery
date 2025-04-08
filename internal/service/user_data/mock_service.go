@@ -17,7 +17,7 @@ func (m *MockUserDataService) GetLatestUserData() (*models.UserData, error) {
 	return args.Get(0).(*models.UserData), args.Error(1)
 }
 
-func (m *MockUserDataService) AddLatestUserData(data *models.UserData) error {
-	args := m.Called(data)
+func (m *MockUserDataService) AddLatestUserData() error {
+	args := m.Called()
 	return args.Error(0)
 }
